@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "fa_we_logs": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7226",
+      "launchBrowser": false
+    }
+  }
+}
