@@ -33,6 +33,8 @@ namespace EUR.QueryLog
                 string[] filter = JsonConvert.DeserializeObject<string[]>(filterValue);
                 azureLogger.TrackEvent($"WFs filter value", new Dictionary<string, string>() {{ "filter", filterValue }} );
 
+                string condition = "";
+                
                 if (!String.IsNullOrEmpty(filterValue) && filter.Length > 0)
                 {
                     string values = "";
@@ -41,28 +43,29 @@ namespace EUR.QueryLog
                         values += $@"<value>{f}</value>";
                     }
 
-                    string condition = $@"<condition attribute='name' operator='in' >
+                    condition = $@"<condition attribute='name' operator='in' >
                                             {values}
-                                        </condition>";
+                                    </condition>";
+                }
 
-                    string fetchquery = $@"<fetch distinct='true'>
-                                            <entity name='workflow'>
-                                                <attribute name='name' />
-                                                <attribute name='category' />
-                                                <attribute name='statecode' />
-                                                <attribute name='modifiedon' />
-                                                <order attribute='name' descending='false' />
-                                                <filter type='and'>
-                                                    <condition attribute='category' operator='eq' value='0' />
-                                                    {condition}
-                                                </filter>
-                                                <order attribute='modifiedon' descending='true' />
-                                            </entity>
-                                        </fetch>";
+                string fetchquery = $@"<fetch distinct='true'>
+                                        <entity name='workflow'>
+                                            <attribute name='name' />
+                                            <attribute name='category' />
+                                            <attribute name='statecode' />
+                                            <attribute name='modifiedon' />
+                                            <order attribute='name' descending='false' />
+                                            <filter type='and'>
+                                                <condition attribute='category' operator='eq' value='0' />
+                                                {condition}
+                                            </filter>
+                                            <order attribute='modifiedon' descending='true' />
+                                        </entity>
+                                    </fetch>";
 
-                    var resultEntities = Helper.RetrieveMultipleEntities(new FetchExpression(fetchquery), azureLogger);
+                var resultEntities = Helper.RetrieveMultipleEntities(new FetchExpression(fetchquery), azureLogger);
 
-                    if (resultEntities != null)
+                if (resultEntities != null)
                     {
                         azureLogger.TrackEvent($"Total retrieved {resultEntities.Count}");
 
@@ -94,7 +97,6 @@ namespace EUR.QueryLog
                             azureLogger.TrackEvent("Workflow record", properties);
                         }
                     }
-                }
 
                 azureLogger.TrackEvent("End QueryWorkflowInfoLogs");
             }

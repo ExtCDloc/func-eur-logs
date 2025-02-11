@@ -28,6 +28,7 @@ namespace EUR.QueryLog
 
                 string fileName = config["PluginStatusBlobFileName"].ToString();
                 var filterFile = await Helper.getValueFromStorage(azureLogger, logger, config, fileName);
+                string queryFilter = "";
 
                 if (!String.IsNullOrEmpty(filterFile))
                 {
@@ -38,83 +39,20 @@ namespace EUR.QueryLog
                         }
                     );
 
-                    if (filterValues.nameFilters.Length > 0) {
+                    if (filterValues.nameFilters.Length > 0) 
+                    {
                         string conditions = "";
+
                         foreach (string name in filterValues.nameFilters) {
                             conditions += $@"<condition attribute='name' operator='eq' value='{name}' />";
                         }
 
-                        string queryFilter = $@"<filter type='or'>{conditions}</filter>";
+                        queryFilter = $@"<filter type='or'>{conditions}</filter>";
                         azureLogger.TrackEvent("Query filter value", new Dictionary<string, string>()
                             {
                                 { "queryFilter", queryFilter }
                             }
                         );
-                    
-                        string fetchquery = $@"<fetch distinct='true'>
-                                                <entity name='sdkmessageprocessingstep'>
-                                                    <attribute name='name' />
-                                                    <attribute name='statecode' />
-                                                    <attribute name='statuscode' />
-                                                    <attribute name='modifiedon' />
-                                                    <attribute name='createdon' />
-                                                    <attribute name='modifiedby' />
-                                                    {queryFilter}
-                                                    <order attribute='name' />
-                                                </entity>
-                                            </fetch>";
-
-                        try 
-                        {
-                            var resultEntities = Helper.RetrieveMultipleEntities(new FetchExpression(fetchquery), azureLogger);
-
-                            if (resultEntities != null)
-                            {
-                                azureLogger.TrackEvent($"Total rows retrieved {resultEntities.Count}");
-                                string version = config["QueryPluginStatusLogs:Version"].ToString();
-                                List<MessageItem> messageItems = new List<MessageItem> { };
-
-                                foreach (Entity item in resultEntities)
-                                {    
-                                    MessageItem messageItem = new MessageItem { };
-                                    messageItem.name = item["name"].ToString();
-                                    messageItem.statecode = ((OptionSetValue)item["statecode"]).Value.ToString();
-                                    messageItem.statuscode = ((OptionSetValue)item["statuscode"]).Value.ToString();
-                                    messageItem.modifiedon = DateTime.Parse(item["modifiedon"].ToString());
-                                    messageItem.modifiedby = ((EntityReference)item.Attributes["modifiedby"]).Id.ToString();
-                                    messageItem.createdon = DateTime.Parse(item["createdon"].ToString());
-
-                                    messageItems.Add(messageItem);
-                                }
-
-                                var result = messageItems.GroupBy(x => x.name)
-                                    .Select(group => group.OrderByDescending(x => x.modifiedon).FirstOrDefault())
-                                    .ToList();
-
-                                azureLogger.TrackEvent($"Result rows retrieved {result.Count}");
-
-                                foreach (var messageItem in result)
-                                {
-                                    var properties = new Dictionary<string, string>()
-                                    {
-                                        {"EntityName", "sdkmessageprocessingstep"},
-                                        {"Version", version},
-                                        {"name", messageItem.name},
-                                        {"statecode", messageItem.statecode},
-                                        {"statuscode", messageItem.statuscode},
-                                        {"modifiedon", messageItem.modifiedon.ToString()},
-                                        {"modifiedby", messageItem.modifiedby},
-                                        {"createdon", messageItem.createdon.ToString()},
-                                    };
-
-                                    azureLogger.TrackEvent("sdkmessageprocessingstep record", properties);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            azureLogger.TrackException(ex);
-                        }
                     }
                     else
                     {
@@ -124,6 +62,71 @@ namespace EUR.QueryLog
                 else
                 {
                     azureLogger.TrackEvent($"Filter file is empty");
+                }
+                    
+                string fetchquery = $@"<fetch distinct='true'>
+                                        <entity name='sdkmessageprocessingstep'>
+                                            <attribute name='name' />
+                                            <attribute name='statecode' />
+                                            <attribute name='statuscode' />
+                                            <attribute name='modifiedon' />
+                                            <attribute name='createdon' />
+                                            <attribute name='modifiedby' />
+                                            {queryFilter}
+                                            <order attribute='name' />
+                                        </entity>
+                                    </fetch>";
+
+                try 
+                {
+                    var resultEntities = Helper.RetrieveMultipleEntities(new FetchExpression(fetchquery), azureLogger);
+
+                    if (resultEntities != null)
+                    {
+                        azureLogger.TrackEvent($"Total rows retrieved {resultEntities.Count}");
+                        string version = config["QueryPluginStatusLogs:Version"].ToString();
+                        List<MessageItem> messageItems = new List<MessageItem> { };
+
+                        foreach (Entity item in resultEntities)
+                        {    
+                            MessageItem messageItem = new MessageItem { };
+                            messageItem.name = item["name"].ToString();
+                            messageItem.statecode = ((OptionSetValue)item["statecode"]).Value.ToString();
+                            messageItem.statuscode = ((OptionSetValue)item["statuscode"]).Value.ToString();
+                            messageItem.modifiedon = DateTime.Parse(item["modifiedon"].ToString());
+                            messageItem.modifiedby = ((EntityReference)item.Attributes["modifiedby"]).Id.ToString();
+                            messageItem.createdon = DateTime.Parse(item["createdon"].ToString());
+
+                            messageItems.Add(messageItem);
+                        }
+
+                        var result = messageItems.GroupBy(x => x.name)
+                            .Select(group => group.OrderByDescending(x => x.modifiedon).FirstOrDefault())
+                            .ToList();
+
+                        azureLogger.TrackEvent($"Result rows retrieved {result.Count}");
+
+                        foreach (var messageItem in result)
+                        {
+                            var properties = new Dictionary<string, string>()
+                            {
+                                {"EntityName", "sdkmessageprocessingstep"},
+                                {"Version", version},
+                                {"name", messageItem.name},
+                                {"statecode", messageItem.statecode},
+                                {"statuscode", messageItem.statuscode},
+                                {"modifiedon", messageItem.modifiedon.ToString()},
+                                {"modifiedby", messageItem.modifiedby},
+                                {"createdon", messageItem.createdon.ToString()},
+                            };
+
+                            azureLogger.TrackEvent("sdkmessageprocessingstep record", properties);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    azureLogger.TrackException(ex);
                 }
 
                 azureLogger.TrackEvent("End QueryPluginStatusLogs");
