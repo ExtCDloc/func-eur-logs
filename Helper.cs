@@ -10,6 +10,9 @@ using System.Net;
 using Microsoft.Xrm.Sdk.Query;
 using Microsoft.Xrm.Sdk;
 using Microsoft.PowerPlatform.Dataverse.Client;
+using Microsoft.Crm.Sdk;
+using Microsoft.Xrm.Sdk.Client;
+using Microsoft.Crm.Sdk.Messages;
 
 namespace EUR.QueryLog
 {
@@ -128,7 +131,33 @@ namespace EUR.QueryLog
                 }
                 catch
                 {
-                    azureLogger.TrackEvent($"ServiceClient error: client index {i}");
+                    azureLogger.TrackEvent($"RetrieveMultipleEntities ServiceClient error: client index {i}");
+                }
+            }
+
+            return result;
+        }
+
+        public static RetrieveTotalRecordCountResponse? RetrieveTotalRecordCount(RetrieveTotalRecordCountRequest request, AzureLogger azureLogger)
+        {
+            IDictionary config = Environment.GetEnvironmentVariables();
+            string connStringConfig = config["EUR:DynamicsConnectionString"].ToString();
+            int crmConnConfigUsersCount = GetCrmConnConfigUsersCount(connStringConfig);
+            RetrieveTotalRecordCountResponse result = null;
+
+            for (int i = 0; i < crmConnConfigUsersCount; i++)
+            {
+                try
+                {
+                    string connString = ConvertCrmConnConfigJsonStringToCrmConnString(connStringConfig, i);
+                    IOrganizationService service = new ServiceClient(connString);
+
+                    result = (RetrieveTotalRecordCountResponse)service.Execute(request);
+                    break;
+                }
+                catch
+                {
+                    azureLogger.TrackEvent($"RetrieveTotalRecordCountResponse ServiceClient error: client index {i}");
                 }
             }
 
