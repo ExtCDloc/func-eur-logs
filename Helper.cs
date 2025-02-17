@@ -129,8 +129,9 @@ namespace EUR.QueryLog
                         break;
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    azureLogger.TrackException(ex);
                     azureLogger.TrackEvent($"RetrieveMultipleEntities ServiceClient error: client index {i}");
                 }
             }
