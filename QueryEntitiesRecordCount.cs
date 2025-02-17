@@ -84,7 +84,6 @@ namespace EUR.QueryLog
                                             <entity name='{setting.entityName}'>
                                                 <attribute name='{setting.idColumnName}' />
                                                 <attribute name='{dateAttribute}' />
-                                                <order attribute='name' descending='false' />
                                                 <filter type='and'>
                                                     <condition attribute='{dateAttribute}' operator='ge' value='{startDate}' />
                                                     <condition attribute='{dateAttribute}' operator='le' value='{endDate}' />
@@ -108,7 +107,7 @@ namespace EUR.QueryLog
                                 }
                                 else
                                 {
-                                    azureLogger.TrackEvent($@"RetrieveMultipleEntities count: 0. dateAttribute: {dateAttribute}, entityName: {setting}");
+                                    azureLogger.TrackEvent($@"RetrieveMultipleEntities count: 0. dateAttribute: {dateAttribute}, entityName: {setting.entityName}");
                                 }
                             }
                         }
