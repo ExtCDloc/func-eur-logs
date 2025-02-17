@@ -58,3 +58,9 @@ public class EntityInfo
     public int createdCount;
     public int modifiedCount;
 }
+
+public class EntityInfoSettings
+{
+    public string entityName;
+    public string idColumnName;
+}

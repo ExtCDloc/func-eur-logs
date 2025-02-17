@@ -31,23 +31,23 @@ namespace EUR.QueryLog
                 try 
                 {
                     string entitiesNameFileName = config["EntitiesNameBlobFileName"].ToString();
-                    var entitiesNamesValue = await Helper.getValueFromStorage(azureLogger, logger, config, entitiesNameFileName);
-                    string[] entityNames = JsonConvert.DeserializeObject<string[]>(entitiesNamesValue);
-                    azureLogger.TrackEvent($"Entity names value", new Dictionary<string, string>() {{ "filter entityNames", entitiesNamesValue }} );
+                    var entitySettingsValue = await Helper.getValueFromStorage(azureLogger, logger, config, entitiesNameFileName);
+                    EntityInfoSettings[] entitySettings = JsonConvert.DeserializeObject<EntityInfoSettings[]>(entitySettingsValue);
+                    azureLogger.TrackEvent($"Entity names value", new Dictionary<string, string>() {{ "filter entityNames", entitySettingsValue }} );
 
                     string entitiesDateFileName = config["EntitiesDateBlobFileName"].ToString();
                     var entitiesDateValue = await Helper.getValueFromStorage(azureLogger, logger, config, entitiesDateFileName);
 
-                    if (!String.IsNullOrEmpty(entitiesNamesValue) && entityNames.Length > 0 && !String.IsNullOrEmpty(entitiesDateValue))
+                    if (!String.IsNullOrEmpty(entitySettingsValue) && entitySettings.Length > 0 && !String.IsNullOrEmpty(entitiesDateValue))
                     {
                         List<EntityInfo> entitiesList = new List<EntityInfo>();
                         DateTime startDate = DateTime.Parse(entitiesDateValue);
                         DateTime endDate = startDate.AddHours(2);
 
-                        foreach (var name in entityNames)
+                        foreach (var setting in entitySettings)
                         {
                             EntityInfo entityInfo = new EntityInfo();
-                            entityInfo.entityName = name;
+                            entityInfo.entityName = setting.entityName;
                             entityInfo.totalCount = 0;
                             entityInfo.createdCount = 0;
                             entityInfo.modifiedCount = 0;
@@ -57,7 +57,7 @@ namespace EUR.QueryLog
                         }
 
                         var request = new RetrieveTotalRecordCountRequest { 
-                            EntityNames = entityNames
+                            EntityNames = Array.ConvertAll(entitySettings, x => x.entityName)
                         };
 
                         var totalRecordResponse = Helper.RetrieveTotalRecordCount(request, azureLogger);
@@ -75,13 +75,14 @@ namespace EUR.QueryLog
                         }
 
                         List<string> dateAttributes = new List<string> {"createdon", "modifiedon"};
-                        foreach (var entityName in entityNames)
+
+                        foreach (var setting in entitySettings)
                         {
                             foreach (var dateAttribute in dateAttributes)
                             {
                                 string fetchquery = $@"<fetch distinct='true'>
-                                            <entity name='{entityName}'>
-                                                <attribute name='name' />
+                                            <entity name='{setting.entityName}'>
+                                                <attribute name='{setting.idColumnName}' />
                                                 <attribute name='{dateAttribute}' />
                                                 <order attribute='name' descending='false' />
                                                 <filter type='and'>
@@ -98,16 +99,16 @@ namespace EUR.QueryLog
                                 {
                                     if (dateAttribute == "createdon")
                                     {
-                                        entitiesList.FirstOrDefault(i => i.entityName == entityName).createdCount = resultEntities.Count;
+                                        entitiesList.FirstOrDefault(i => i.entityName == setting.entityName).createdCount = resultEntities.Count;
                                     }
                                     else
                                     {
-                                        entitiesList.FirstOrDefault(i => i.entityName == entityName).modifiedCount = resultEntities.Count;
+                                        entitiesList.FirstOrDefault(i => i.entityName == setting.entityName).modifiedCount = resultEntities.Count;
                                     }
                                 }
                                 else
                                 {
-                                    azureLogger.TrackEvent($@"RetrieveMultipleEntities count: 0. dateAttribute: {dateAttribute}, entityName: {entityName}");
+                                    azureLogger.TrackEvent($@"RetrieveMultipleEntities count: 0. dateAttribute: {dateAttribute}, entityName: {setting}");
                                 }
                             }
                         }
