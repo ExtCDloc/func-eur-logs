@@ -43,3 +43,18 @@ public class FunctionResponse
     public string name;
     public bool isDisabled;
 }
+
+public class EntitiesRecordResponse
+{
+    public EntityInfo[] entitiesResponse;
+}
+
+public class EntityInfo
+{
+    public string entityName;
+    public DateTime startDate;
+    public DateTime endDate;
+    public int totalCount;
+    public int createdCount;
+    public int modifiedCount;
+}

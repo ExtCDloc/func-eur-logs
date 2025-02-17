@@ -66,37 +66,37 @@ namespace EUR.QueryLog
                 var resultEntities = Helper.RetrieveMultipleEntities(new FetchExpression(fetchquery), azureLogger);
 
                 if (resultEntities != null)
+                {
+                    azureLogger.TrackEvent($"Total retrieved {resultEntities.Count}");
+
+                    string version = config["QueryWorkflowInfoLogs:Version"].ToString();
+
+                    foreach (Entity item in resultEntities)
                     {
-                        azureLogger.TrackEvent($"Total retrieved {resultEntities.Count}");
-
-                        string version = config["QueryWorkflowInfoLogs:Version"].ToString();
-
-                        foreach (Entity item in resultEntities)
+                        var properties = new Dictionary<string, string>()
                         {
-                            var properties = new Dictionary<string, string>()
+                            {"EntityName", "workflow"},
+                            {"Version", version},
+                        };
+                        
+                        foreach (var key in item.Attributes.Keys)
+                        {
+                            var type = (item.Attributes[key]).GetType();
+
+                            var attrValue = type.ToString() switch
                             {
-                                {"EntityName", "workflow"},
-                                {"Version", version},
+                                "Microsoft.Xrm.Sdk.OptionSetValue" => item.FormattedValues[key].ToString(),
+                                "Microsoft.Xrm.Sdk.EntityReference" => ((EntityReference)item.Attributes[key]).Id.ToString(),
+                                "Microsoft.Xrm.Sdk.AliasedValue" => ((AliasedValue)item.Attributes[key]).Value.ToString(),
+                                _ => item[key].ToString(),
                             };
-                            
-                            foreach (var key in item.Attributes.Keys)
-                            {
-                                var type = (item.Attributes[key]).GetType();
 
-                                var attrValue = type.ToString() switch
-                                {
-                                    "Microsoft.Xrm.Sdk.OptionSetValue" => item.FormattedValues[key].ToString(),
-                                    "Microsoft.Xrm.Sdk.EntityReference" => ((EntityReference)item.Attributes[key]).Id.ToString(),
-                                    "Microsoft.Xrm.Sdk.AliasedValue" => ((AliasedValue)item.Attributes[key]).Value.ToString(),
-                                    _ => item[key].ToString(),
-                                };
-
-                                properties.Add(key, attrValue);
-                            }
-
-                            azureLogger.TrackEvent("Workflow record", properties);
+                            properties.Add(key, attrValue);
                         }
+
+                        azureLogger.TrackEvent("Workflow record", properties);
                     }
+                }
 
                 azureLogger.TrackEvent("End QueryWorkflowInfoLogs");
             }
