@@ -90,6 +90,7 @@ namespace EUR.QueryLog
                                                 </filter>
                                             </entity>
                                         </fetch>";
+                                azureLogger.TrackEvent($"fetchquery: {fetchquery}");
                                 
                                 var resultEntities = Helper.RetrieveMultipleEntities(new FetchExpression(fetchquery), azureLogger);
                             
