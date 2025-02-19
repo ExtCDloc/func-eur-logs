@@ -117,18 +117,24 @@ namespace EUR.QueryLog
                                 }
                             }
 
-                            EntitiesRecordResponse response = new EntitiesRecordResponse {
-                                entitiesResponse = entitiesList.ToArray()
-                            };
-
                             string version = config["QueryEntitiesRecordCount:Version"].ToString();
 
-                            string jsonResponse = JsonConvert.SerializeObject(response);
-                            azureLogger.TrackEvent("Entities info value", new Dictionary<string, string>() 
+                            foreach (var entity in entitiesList)
                             {
-                                {"Version", version},
-                                {"jsonResponse", jsonResponse},
-                            });
+                                var properties = new Dictionary<string, string>()
+                                {
+                                    {"Entity", "entitiesRecord"},
+                                    {"Version", version},
+                                    {"entityName", entity.entityName},
+                                    {"startDate", entity.startDate.ToString()},
+                                    {"endDate", entity.endDate.ToString()},
+                                    {"totalCount", entity.totalCount.ToString()},
+                                    {"createdCount", entity.createdCount.ToString()},
+                                    {"modifiedCount", entity.modifiedCount.ToString()},
+                                };
+
+                                azureLogger.TrackEvent("Entities info value", properties);
+                            }
 
                             azureLogger.TrackEvent($"Last date: {endDate}");
                             await Helper.setValueToStorage(azureLogger, logger, config, endDate.ToString(), entitiesDateFileName);
@@ -137,7 +143,6 @@ namespace EUR.QueryLog
                         {
                             azureLogger.TrackEvent($"Current date ({DateTime.Now}) less than end date ({endDate})");
                         }
-
                     }
                 }
                 catch (Exception ex)
